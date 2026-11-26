@@ -131,26 +131,63 @@ public class DataService
     }
 
     public PN OpretPN(int patientId, int laegemiddelId, double antal, DateTime startDato, DateTime slutDato) {
-        // TODO: Implement!
-        return null!;
+        Patient patient = db.Patienter.Find(patientId) ?? throw new ArgumentException("Patienten blev ikke fundet.");
+
+        Laegemiddel laegemiddel = db.Laegemiddler.Find(laegemiddelId) ?? throw new ArgumentException("Lægemidlet blev ikke fundet.");
+
+        PN ordination = new PN(startDato, slutDato, antal, laegemiddel);
+
+        patient.ordinationer.Add(ordination);
+        db.SaveChanges();
+
+        return ordination;
+        
     }
 
     public DagligFast OpretDagligFast(int patientId, int laegemiddelId, 
         double antalMorgen, double antalMiddag, double antalAften, double antalNat, 
         DateTime startDato, DateTime slutDato) {
 
-        // TODO: Implement!
-        return null!;
+        Patient patient = db.Patienter.Find(patientId) ?? throw new ArgumentException("Patienten blev ikke fundet.");
+
+        Laegemiddel laegemiddel = db.Laegemiddler.Find(laegemiddelId) ?? throw new ArgumentException("Lægemidlet blev ikke fundet.");
+
+        DagligFast ordination = new DagligFast(startDato, slutDato, laegemiddel,antalMorgen, antalMiddag, antalAften, antalNat);
+
+        patient.ordinationer.Add(ordination);
+        db.SaveChanges();
+
+        return ordination;
     }
 
     public DagligSkæv OpretDagligSkaev(int patientId, int laegemiddelId, Dosis[] doser, DateTime startDato, DateTime slutDato) {
-        // TODO: Implement!
-        return null!;
+        Patient patient = db.Patienter.Find(patientId) ?? throw new ArgumentException("Patienten blev ikke fundet.");
+
+        Laegemiddel laegemiddel = db.Laegemiddler.Find(laegemiddelId) ?? throw new ArgumentException("Lægemidlet blev ikke fundet.");
+
+        DagligSkæv ordination = new DagligSkæv(startDato, slutDato, laegemiddel, doser);
+
+        patient.ordinationer.Add(ordination);
+        db.SaveChanges();
+
+        return ordination;
     }
 
     public string AnvendOrdination(int id, Dato dato) {
-        // TODO: Implement!
-        return null!;
+        PN? ordination = db.PNs.Include(pn => pn.dates).FirstOrDefault(pn => pn.OrdinationId == id);
+
+        if (ordination == null)
+        {
+            throw new ArgumentException("PN-ordinationen blev ikke fundet.");
+        }
+
+        if (ordination.givDosis(dato))
+        {
+            db.SaveChanges();
+            return "Dosis registreret.";
+        }
+
+        return "Dosis kunne ikke registreres.";
     }
 
     /// <summary>
@@ -161,8 +198,26 @@ public class DataService
     /// <param name="laegemiddel"></param>
     /// <returns></returns>
 	public double GetAnbefaletDosisPerDøgn(int patientId, int laegemiddelId) {
-        // TODO: Implement!
-        return -1;
-	}
+        Patient patient = db.Patienter.Find(patientId) ?? throw new ArgumentException("Patienten blev ikke fundet.");
+
+        Laegemiddel laegemiddel = db.Laegemiddler.Find(laegemiddelId) ?? throw new ArgumentException("Lægemidlet blev ikke fundet.");
+
+        double faktor;
+
+        if (patient.vaegt < 25)
+        {
+            faktor = laegemiddel.enhedPrKgPrDoegnLet;
+        }
+        else if (patient.vaegt <= 120)
+        {
+            faktor = laegemiddel.enhedPrKgPrDoegnNormal;
+        }
+        else
+        {
+            faktor = laegemiddel.enhedPrKgPrDoegnTung;
+        }
+
+        return faktor * patient.vaegt;
+    }
     
 }
